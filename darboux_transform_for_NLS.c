@@ -25,39 +25,22 @@ void clear_complex(complex_nbr *z)
 	mpfr_clear(z->im);
 }
 
-void complex_mult(complex_nbr *out, complex_nbr *z1, complex_nbr *z2, mpfr_t d1)
+void complex_d_to_mpfr(complex_nbr *out, complex double z)
 {
-
-	//(a+ib)*(c+id)=ac-bd+i(ad+bc)
-	// store ac and ad, then replace out.re	 with bc
-
-	// ac ad bc bd
-	mpfr_fmms(d1, z1->re, z2->re, z1->im, z2->im, MPFR_RNDN);
-	mpfr_fmma(out->im, z1->re, z2->im, z1->im, z2->re, MPFR_RNDN);
-
-	mpfr_set(out->re, d1, MPFR_RNDN);
-}
-
-void complex_mult_d(complex_nbr *out, complex_nbr *z1, complex double z2, complex_nbr *dum)
-{
-	//(a+ib)*(c+id)=ac-bd+i(ad+bc)
-	// store ac and ad, then replace out.re	 with bc
-
-	// ac ad bc bd
-	mpfr_mul_d(dum[2].re, z1->re, creal(z2), MPFR_RNDN);
-	mpfr_mul_d(dum[2].im, z1->re, cimag(z2), MPFR_RNDN);
-	mpfr_mul_d(out->re, z1->im, creal(z2), MPFR_RNDN);
-	mpfr_mul_d(dum[1].re, z1->im, cimag(z2), MPFR_RNDN);
-
-	mpfr_add(out->im, dum[2].im, out->re, MPFR_RNDN);
-
-	mpfr_sub(out->re, dum[2].re, dum[1].re, MPFR_RNDN);
+	mpfr_set_d(out->re, creal(z), MPFR_RNDN);
+	mpfr_set_d(out->im, cimag(z), MPFR_RNDN);
 }
 
 void complex_add(complex_nbr *out, complex_nbr *z1, complex_nbr *z2)
 {
 	mpfr_add(out->re, z1->re, z2->re, MPFR_RNDN);
 	mpfr_add(out->im, z1->im, z2->im, MPFR_RNDN);
+}
+
+void complex_sub(complex_nbr *out, complex_nbr *z1, complex_nbr *z2)
+{
+	mpfr_sub(out->re, z1->re, z2->re, MPFR_RNDN);
+	mpfr_sub(out->im, z1->im, z2->im, MPFR_RNDN);
 }
 
 void complex_conj(complex_nbr *out, complex_nbr *z)
@@ -71,36 +54,6 @@ void complex_conj(complex_nbr *out, complex_nbr *z)
 		mpfr_set_zero(out->im, 1);
 	}
 	mpfr_set(out->re, z->re, MPFR_RNDN);
-}
-
-void complex_mtrx_add(complex_nbr *out, complex_nbr *M1, complex_nbr *M2)
-{
-	for (int i = 0; i < 4; i++)
-	{
-		complex_add(out + i, M1 + i, M2 + i);
-	}
-}
-
-void complex_mtrx_mul_2x2(complex_nbr *out, complex_nbr *M1, complex_nbr *M2, complex_nbr *dum)
-{
-	for (int i = 0; i < 2; i++)
-	{
-		// dum[0]=m11a11 dum[1]=m12a21
-		complex_mult(dum + 0, &(M1[2 * i]), &(M2[0]), dum[1].re);
-		complex_mult(&(out[2 * i]), &(M1[2 * i + 1]), &(M2[2]), dum[1].re);
-		complex_add(&(out[2 * i]), dum + 0, &(out[2 * i]));
-
-		// dum[0]=m11a12 dum[1]=m12a22
-		complex_mult(dum + 0, &(M1[2 * i]), &(M2[1]), dum[1].re);
-		complex_mult(&(out[2 * i + 1]), &(M1[2 * i + 1]), &(M2[3]), dum[1].re);
-		complex_add(&(out[2 * i + 1]), dum + 0, &(out[2 * i + 1]));
-	}
-}
-
-void complex_d_to_mpfr(complex_nbr *out, complex double z)
-{
-	mpfr_set_d(out->re, creal(z), MPFR_RNDN);
-	mpfr_set_d(out->im, cimag(z), MPFR_RNDN);
 }
 
 void complex_exp(complex_nbr *out, complex_nbr *z)
@@ -151,6 +104,69 @@ void complex_mult_by_re(complex_nbr *out, complex_nbr *z, mpfr_t r)
 	mpfr_mul(out->im, z->im, r, MPFR_RNDN);
 }
 
+void complex_mult(complex_nbr *out, complex_nbr *z1, complex_nbr *z2, mpfr_t d1)
+{
+
+	//(a+ib)*(c+id)=ac-bd+i(ad+bc)
+	// store ac and ad, then replace out.re	 with bc
+
+	// ac ad bc bd
+	if (mpfr_zero_p(z1->im))
+	{
+		complex_mult_by_re(out, z2, z1->re);
+	}
+	else if (mpfr_zero_p(z2->im))
+	{
+		complex_mult_by_re(out, z1, z2->re);
+	}
+	else
+	{
+		mpfr_fmms(d1, z1->re, z2->re, z1->im, z2->im, MPFR_RNDN);
+		mpfr_fmma(out->im, z1->re, z2->im, z1->im, z2->re, MPFR_RNDN);
+		mpfr_set(out->re, d1, MPFR_RNDN);
+	}
+}
+
+void complex_mult_d(complex_nbr *out, complex_nbr *z1, complex double z2, complex_nbr *dum)
+{
+	//(a+ib)*(c+id)=ac-bd+i(ad+bc)
+	// store ac and ad, then replace out.re	 with bc
+
+	// ac ad bc bd
+	mpfr_mul_d(dum[2].re, z1->re, creal(z2), MPFR_RNDN);
+	mpfr_mul_d(dum[2].im, z1->re, cimag(z2), MPFR_RNDN);
+	mpfr_mul_d(out->re, z1->im, creal(z2), MPFR_RNDN);
+	mpfr_mul_d(dum[1].re, z1->im, cimag(z2), MPFR_RNDN);
+
+	mpfr_add(out->im, dum[2].im, out->re, MPFR_RNDN);
+
+	mpfr_sub(out->re, dum[2].re, dum[1].re, MPFR_RNDN);
+}
+
+void complex_mtrx_add(complex_nbr *out, complex_nbr *M1, complex_nbr *M2)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		complex_add(out + i, M1 + i, M2 + i);
+	}
+}
+
+void complex_mtrx_mul_2x2(complex_nbr *out, complex_nbr *M1, complex_nbr *M2, complex_nbr *dum)
+{
+	for (int i = 0; i < 2; i++)
+	{
+		// dum[0]=m11a11 dum[1]=m12a21
+		complex_mult(dum + 0, &(M1[2 * i]), &(M2[0]), dum[1].re);
+		complex_mult(&(out[2 * i]), &(M1[2 * i + 1]), &(M2[2]), dum[1].re);
+		complex_add(&(out[2 * i]), dum + 0, &(out[2 * i]));
+
+		// dum[0]=m11a12 dum[1]=m12a22
+		complex_mult(dum + 0, &(M1[2 * i]), &(M2[1]), dum[1].re);
+		complex_mult(&(out[2 * i + 1]), &(M1[2 * i + 1]), &(M2[3]), dum[1].re);
+		complex_add(&(out[2 * i + 1]), dum + 0, &(out[2 * i + 1]));
+	}
+}
+
 void complex_inverse(complex_nbr *out, complex_nbr *z, complex_nbr *dum)
 {
 	if (!mpfr_zero_p(z->im) || !mpfr_zero_p(z->re))
@@ -164,7 +180,7 @@ void complex_inverse(complex_nbr *out, complex_nbr *z, complex_nbr *dum)
 
 void complex_printf(complex_nbr *z)
 {
-	mpfr_printf("%.50Rf%+.50Rf", z->re, z->im);
+	mpfr_printf("%.8Rf%+.8Rf", z->re, z->im);
 	printf("i");
 }
 
@@ -174,15 +190,21 @@ void complex_set_zero(complex_nbr *z)
 	mpfr_set_zero(z->im, 1);
 }
 
-void get_init_matrix(complex_nbr **out, double x, complex double *eigVs, int n, complex_nbr *dum)
+void get_init_matrix(complex_nbr **out, double x, complex_nbr *eigVs, int n, complex_nbr *dum)
 {
 	for (int i = 0; i < n; i++)
 	{
-		complex double zi = eigVs[i];
+		complex_nbr *zi = eigVs + i;
 
 		// Get M^0(z*)
-		// M[0]=exp(i*zi*x), M[3]=e^(-i*zi*x)
-		complex_d_to_mpfr(dum, -I * zi * x);
+		// M[0]=exp(-i*conj(zi)*x), M[3]=e^(i*conj(zi)*x)
+
+		// set dum=(-i*conj(zi)*x)
+		complex_mult_by_i(dum, zi, (dum + 1)->re);
+		complex_conj(dum, dum);
+		mpfr_set_d((dum + 1)->re, x, MPFR_RNDN);
+		complex_mult_by_re(dum, dum, dum->re);
+
 		complex_exp(&(out[i][0]), dum);
 
 		if (!mpfr_zero_p(dum->re))
@@ -201,13 +223,15 @@ void get_init_matrix(complex_nbr **out, double x, complex double *eigVs, int n, 
 	}
 }
 
-void darboux_transform(complex_nbr *sol, complex double *eigVs, double *coeffs, complex_nbr **init_matrix, double t, int n, complex_nbr *dum, FILE *log_ptr)
+void darboux_transform(complex_nbr *sol, complex_nbr *eigVs, complex_nbr *coeffs, complex_nbr **init_matrix, double t, int n, complex_nbr *dum, FILE *log_ptr)
 {
 	// complex_nbr **M;
 	complex_nbr q[2];
 	complex_nbr ci;
 	complex_nbr Q[4];
 	complex_nbr **M;
+	complex_nbr zk_zi_val;
+	complex_nbr *zk_zi = &zk_zi_val;
 
 	init_complex(&Q[0]);
 	init_complex(&Q[1]);
@@ -216,6 +240,7 @@ void darboux_transform(complex_nbr *sol, complex double *eigVs, double *coeffs, 
 	init_complex(&q[0]);
 	init_complex(&q[1]);
 	init_complex(&ci);
+	init_complex(zk_zi);
 
 	complex_set_zero(sol);
 
@@ -240,11 +265,19 @@ void darboux_transform(complex_nbr *sol, complex double *eigVs, double *coeffs, 
 	for (int i = 0; i < n; i++)
 	{
 		// get c_i(t) = c_i e^-2itz^2
-		complex double zi = eigVs[i];
-		complex_d_to_mpfr(&ci, -2 * I * zi * zi * t);
+		complex_nbr *zi = eigVs + i;
+
+		// set ci = -2iz^2 t
+		complex_mult(&ci, zi, zi, dum->re);
+		complex_mult_by_i(&ci, &ci, dum->re);
+		mpfr_set_d(dum->re, -2 * t, MPFR_RNDN);
+		complex_mult_by_re(&ci, &ci, dum->re);
+
+		// complex_d_to_mpfr(&ci, -2 * I * zi * zi * t);
 
 		complex_exp(&ci, &ci);
-		complex_mult_d(&ci, &ci, coeffs[i], dum);
+		// complex_mult_d(&ci, &ci, coeffs[i], dum);
+		complex_mult(&ci, &ci, coeffs + i, dum->re);
 
 		// q[0]=M*(zi*)[0]+ci*M*(zi*)[1]
 		complex_conj(&(q[0]), &(M[i][1]));
@@ -264,7 +297,8 @@ void darboux_transform(complex_nbr *sol, complex double *eigVs, double *coeffs, 
 
 		// set c1.re=2Im(z)/(q1^2+q2^2)
 		mpfr_add(ci.re, dum->re, dum->im, MPFR_RNDN);
-		mpfr_d_div(ci.re, 2 * cimag(zi), ci.re, MPFR_RNDN);
+		mpfr_div(ci.re, zi->im, ci.re, MPFR_RNDN);
+		mpfr_mul_ui(ci.re, ci.re, 2, MPFR_RNDN);
 
 		// Q[0]=i*ci.re*|q_1|^2, Q[3]=|q_2|^2
 		mpfr_set_zero(Q[0].re, 1);
@@ -287,11 +321,8 @@ void darboux_transform(complex_nbr *sol, complex double *eigVs, double *coeffs, 
 
 		for (int k = i + 1; k < n; k++)
 		{
-			complex double zk_zi = conj(eigVs[k]) - zi;
-			// get 1/(zk^*-zi)
-			complex_d_to_mpfr(dum, zk_zi);
-
-			complex_inverse(dum, dum, dum + 1);
+			complex_sub(zk_zi, eigVs + k, zi);
+			complex_inverse(zk_zi, zk_zi, dum);
 
 			// M[0]=Qn/(zk-zn)
 
@@ -329,6 +360,7 @@ void darboux_transform(complex_nbr *sol, complex double *eigVs, double *coeffs, 
 	clear_complex(&q[0]);
 	clear_complex(&q[1]);
 	clear_complex(&ci);
+	clear_complex(zk_zi);
 }
 
 // Input format:
@@ -347,8 +379,8 @@ int main(void)
 	mpfr_set_default_prec(PRECISION);
 
 	char output_path[] = "/Users/ivanpedrocr/Documents/soliton_computation.txt";
-	complex double *eigVs;
-	double *eigRe, *eigIm, *coeffs;
+	complex_nbr *eigVs, *coeffs;
+	double *eigRe, *eigIm, *coeffsRe, *coeffsIm;
 	int n_eigVs, t_length, x_length;
 	double t_step, x_step, t_start, t_end, x_start, x_end;
 	complex_nbr dum[3], sol;
@@ -372,22 +404,34 @@ int main(void)
 
 	fscanf(in_ptr, "%d", &n_eigVs);
 
-	eigVs = calloc(n_eigVs, sizeof(complex double));
 	eigRe = calloc(n_eigVs, sizeof(double));
 	eigIm = calloc(n_eigVs, sizeof(double));
-	coeffs = calloc(n_eigVs, sizeof(double));
+	coeffsRe = calloc(n_eigVs, sizeof(double));
+	coeffsIm = calloc(n_eigVs, sizeof(double));
+
+	eigVs = calloc(n_eigVs, sizeof(complex_nbr));
+	coeffs = calloc(n_eigVs, sizeof(complex_nbr));
 
 	for (int i = 0; i < n_eigVs; i++)
 	{
 		fscanf(in_ptr, "%lf + %lfi", &(eigRe[i]), &(eigIm[i]));
 		// printf("eig %d:%lf + %lfi\n", i + 1, eigRe[i], eigIm[i]);
-		eigVs[i] = CMPLX(eigRe[i], eigIm[i]);
+		init_complex(eigVs + i);
+		complex_d_to_mpfr(eigVs + i, CMPLX(eigRe[i], eigIm[i]));
+
+		// complex_printf(eigVs + i);
+		// printf("\n");
 	}
 
 	for (int i = 0; i < n_eigVs; i++)
 	{
-		fscanf(in_ptr, " %lf", coeffs + i);
-		// printf("coeff %d:%lf\n", i + 1, coeffs[i]);
+		fscanf(in_ptr, "%lf + %lfi", coeffsRe + i, coeffsIm + i);
+		init_complex(coeffs + i);
+		complex_d_to_mpfr(coeffs + i, CMPLX(coeffsRe[i], coeffsIm[i]));
+
+		// complex_printf(coeffs + i);
+		// printf("\n");
+		// printf("eig %d:%lf + %lfi\n", i + 1, eigRe[i], eigIm[i]);
 	}
 
 	fscanf(in_ptr, "%lf %lf %lf", &x_start, &x_step, &x_end);
@@ -442,6 +486,9 @@ int main(void)
 		clear_complex(&(init_matrix[i][1]));
 		clear_complex(&(init_matrix[i][2]));
 		clear_complex(&(init_matrix[i][3]));
+
+		clear_complex(eigVs + i);
+		clear_complex(coeffs + i);
 
 		free(init_matrix[i]);
 	}
