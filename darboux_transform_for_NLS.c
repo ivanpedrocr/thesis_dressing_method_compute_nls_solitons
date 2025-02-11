@@ -182,7 +182,7 @@ void get_init_matrix(complex_nbr **out, double x, complex double *eigVs, int n, 
 
 		// Get M^0(z*)
 		// M[0]=exp(i*zi*x), M[3]=e^(-i*zi*x)
-		complex_d_to_mpfr(dum, -I * zi * x);
+		complex_d_to_mpfr(dum, -I * conj(zi) * x);
 		complex_exp(&(out[i][0]), dum);
 
 		if (!mpfr_zero_p(dum->re))
