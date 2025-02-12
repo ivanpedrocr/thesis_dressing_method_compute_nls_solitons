@@ -213,6 +213,60 @@ void complex_set_zero(complex_nbr *z)
 	mpfr_set_zero(z->im, 1);
 }
 
+void get_eigVs(complex_nbr *eigVs, int n, FILE *in_ptr)
+{
+	char input1[50];
+	char input2[50];
+	for (int i = 0; i < n; i++)
+	{
+		fscanf(in_ptr, "%s + %s", input1, input2);
+		input2[strlen(input2) - 1] = '\0';
+
+		mpfr_set_str(eigVs[i].re, input1, 10, MPFR_RNDN);
+
+		mpfr_set_str(eigVs[i].im, input2, 10, MPFR_RNDN);
+
+		memset(input1, 0, sizeof(input1));
+		memset(input2, 0, sizeof(input2));
+	}
+}
+
+void get_coeffs(complex_nbr *coeffs, int n, FILE *in_ptr)
+{
+	char real_input_str[50];
+	char imag_input_str[50];
+	for (int i = 0; i < n; i++)
+	{
+		fscanf(in_ptr, "%s + %s", real_input_str, imag_input_str);
+		imag_input_str[strlen(imag_input_str) - 1] = '\0';
+
+		mpfr_set_str(coeffs[i].re, real_input_str, 10, MPFR_RNDN);
+
+		mpfr_set_str(coeffs[i].im, imag_input_str, 10, MPFR_RNDN);
+
+		memset(real_input_str, 0, sizeof(real_input_str));
+		memset(imag_input_str, 0, sizeof(imag_input_str));
+	}
+}
+
+void get_coeffs_time(complex_nbr *coeffs_t, complex_nbr *coeffs, complex_nbr *eigVs, int n_eigVs, double t, mpfr_t dum)
+{
+	for (int k = 0; k < n_eigVs; k++)
+	{
+		complex_nbr *zk = eigVs + k;
+
+		complex_mult(coeffs_t + k, zk, zk, dum);
+		complex_mult_by_i(coeffs_t + k, coeffs_t + k, dum);
+		mpfr_set_d(dum, -2 * t, MPFR_RNDN);
+		complex_mult_by_re(coeffs_t + k, coeffs_t + k, dum);
+		complex_exp(coeffs_t + k, coeffs_t + k);
+		complex_mult(coeffs_t + k, coeffs_t + k, coeffs + k, dum);
+
+		// complex_printf(coeffs_t + k);
+		// printf("\n");
+	}
+}
+
 void get_init_matrix(complex_nbr **out, double x, complex_nbr *eigVs, int n, complex_nbr *dum)
 {
 	for (int i = 0; i < n; i++)
@@ -398,6 +452,8 @@ void darboux_transform(complex_nbr *sol, complex_nbr *eigVs, complex_nbr *coeffs
 	clear_complex(zk_zi);
 }
 
+void dressing_transform_grid() {}
+
 // Input format:
 // n_eigVs
 // eig1
@@ -412,13 +468,13 @@ void darboux_transform(complex_nbr *sol, complex_nbr *eigVs, complex_nbr *coeffs
 int main(void)
 {
 	mpfr_set_default_prec(PRECISION);
-
 	char output_path[] = "/Users/ivanpedrocr/Documents/soliton_computation.txt";
+
 	complex_nbr *eigVs, *coeffs, *coeffs_t;
 	double *eigRe, *eigIm, *coeffsRe, *coeffsIm;
 	int n_eigVs, t_length, x_length;
 	double t_step, x_step, t_start, t_end, x_start, x_end;
-	char real_input_str[50], imag_input_str[50];
+	// char real_input_str[50], imag_input_str[50];
 	complex_nbr dum[3], sol;
 	complex_nbr **init_matrix;
 
@@ -452,50 +508,12 @@ int main(void)
 	for (int i = 0; i < n_eigVs; i++)
 	{
 		init_complex(eigVs + i);
-
-		fscanf(in_ptr, "%s + %s", real_input_str, imag_input_str);
-		imag_input_str[strlen(imag_input_str) - 1] = '\0';
-
-		mpfr_set_str(eigVs[i].re, real_input_str, 10, MPFR_RNDN);
-
-		mpfr_set_str(eigVs[i].im, imag_input_str, 10, MPFR_RNDN);
-
-		memset(real_input_str, 0, sizeof(real_input_str));
-		memset(imag_input_str, 0, sizeof(imag_input_str));
-
-		// complex_printf(eigVs + i);
-		// printf("\n");
-
-		// fscanf(in_ptr, "%lf + %lfi", &(eigRe[i]), &(eigIm[i]));
-		// complex_d_to_mpfr(eigVs + i, CMPLX(eigRe[i], eigIm[i]));
-
-		// printf("%s + %si\n", real_input_str, imag_input_str);
-	}
-
-	for (int i = 0; i < n_eigVs; i++)
-	{
 		init_complex(coeffs + i);
-
-		fscanf(in_ptr, "%s + %s", real_input_str, imag_input_str);
-		imag_input_str[strlen(imag_input_str) - 1] = '\0';
-
-		mpfr_set_str(coeffs[i].re, real_input_str, 10, MPFR_RNDN);
-
-		mpfr_set_str(coeffs[i].im, imag_input_str, 10, MPFR_RNDN);
-
-		memset(real_input_str, 0, sizeof(real_input_str));
-		memset(imag_input_str, 0, sizeof(imag_input_str));
-
-		// fscanf(in_ptr, "%lf + %lfi", coeffsRe + i, coeffsIm + i);
-		// init_complex(coeffs + i);
-		// complex_d_to_mpfr(coeffs + i, CMPLX(coeffsRe[i], coeffsIm[i]));
-
 		init_complex(coeffs_t + i);
-
-		// complex_printf(coeffs + i);
-		// printf("\n");
-		// printf("eig %d:%lf + %lfi\n", i + 1, eigRe[i], eigIm[i]);
 	}
+
+	get_eigVs(eigVs, n_eigVs, in_ptr);
+	get_coeffs(coeffs, n_eigVs, in_ptr);
 
 	fscanf(in_ptr, "%lf %lf %lf", &x_start, &x_step, &x_end);
 	fscanf(in_ptr, "%lf %lf %lf", &t_start, &t_step, &t_end);
@@ -511,34 +529,16 @@ int main(void)
 		init_complex(&(init_matrix[i][2]));
 		init_complex(&(init_matrix[i][3]));
 	}
-
-	// printf("x_start: %lf,x_step: %lf,x_end: %lf\n", x_start, x_step, x_end);
-	// printf("t_start: %lf,t_step: %lf,t_end: %lf\n", t_start, t_step, t_end);
-
 	x_length = floor((x_end - x_start) / x_step);
 	t_length = floor((t_end - t_start) / t_step);
+
+	// START DRESSING TRANSFORM ON GRID
 
 	for (int i = 0; i <= t_length; i++)
 	{
 		double t = t_start + i * t_step;
-		for (int k = 0; k < n_eigVs; k++)
-		{
-			complex_nbr *zk = eigVs + k;
-			// set ci = -2iz^2 t
-			complex_mult(coeffs_t + k, zk, zk, dum->re);
-			complex_mult_by_i(coeffs_t + k, coeffs_t + k, dum->re);
-			mpfr_set_d(dum->re, -2 * t, MPFR_RNDN);
-			complex_mult_by_re(coeffs_t + k, coeffs_t + k, dum->re);
 
-			// complex_d_to_mpfr(ci, -2 * I * zi * zi * t);
-
-			complex_exp(coeffs_t + k, coeffs_t + k);
-			// complex_mult_d(coeffs_t + k, coeffs_t + k, coeffs[i], dum);
-			complex_mult(coeffs_t + k, coeffs_t + k, coeffs + k, dum->re);
-
-			// complex_printf(coeffs_t + k);
-			// printf("\n");
-		}
+		get_coeffs_time(coeffs_t, coeffs, eigVs, n_eigVs, t, dum->re);
 
 		for (int j = 0; j <= x_length; j++)
 		{
@@ -546,21 +546,8 @@ int main(void)
 
 			get_init_matrix(init_matrix, x, eigVs, n_eigVs, dum);
 
-			// complex_printf(init_matrix[0] + 0);
-			// printf(" , ");
-			// complex_printf(init_matrix[0] + 1);
-			// printf("\n");
-			// complex_printf(init_matrix[0] + 2);
-			// printf(" , ");
-			// complex_printf(init_matrix[0] + 3);
-			// printf("\n");
-			// printf("\n");
-
-			// ERROR WHEN t=10,x=30
-
-			// printf("x,t in loop: %lf, %lf\n", x, t);
-
 			darboux_transform(&sol, eigVs, coeffs_t, init_matrix, n_eigVs, dum, log_ptr);
+
 			mpfr_fprintf(out_ptr, "%.16Rf%+.16Rf", sol.re, sol.im);
 			fprintf(out_ptr, "i ");
 		}
