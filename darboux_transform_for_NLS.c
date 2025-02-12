@@ -203,7 +203,7 @@ void complex_inverse(complex_nbr *out, complex_nbr *z, complex_nbr *dum)
 
 void complex_printf(complex_nbr *z)
 {
-	mpfr_printf("%.8Rf%+.8Rf", z->re, z->im);
+	mpfr_printf("%.8Re%+.8Re", z->re, z->im);
 	printf("i");
 }
 
@@ -418,8 +418,7 @@ int main(void)
 	double *eigRe, *eigIm, *coeffsRe, *coeffsIm;
 	int n_eigVs, t_length, x_length;
 	double t_step, x_step, t_start, t_end, x_start, x_end;
-	char cur_input_string[100];
-	char *real_part;
+	char real_input_str[50], imag_input_str[50];
 	complex_nbr dum[3], sol;
 	complex_nbr **init_matrix;
 
@@ -453,32 +452,43 @@ int main(void)
 	for (int i = 0; i < n_eigVs; i++)
 	{
 		init_complex(eigVs + i);
-		// fgets(cur_input_string, 100, in_ptr);
-		// real_part = strtok(cur_input_string, "+");
-		// printf("eig %d:%lf + %lfi\n", i + 1, eigRe[i], eigIm[i]);
 
-		// mpfr_set_str(eigVs[i].re, real_part, 10, MPFR_RNDN);
-		// real_part = strtok(NULL, "+");
+		fscanf(in_ptr, "%s + %s", real_input_str, imag_input_str);
+		imag_input_str[strlen(imag_input_str) - 1] = '\0';
 
-		// mpfr_set_str(eigVs[i].im, real_part, 10, MPFR_RNDN);
+		mpfr_set_str(eigVs[i].re, real_input_str, 10, MPFR_RNDN);
 
-		// complex_printf(eigVs + i);
-		// printf("\n");
+		mpfr_set_str(eigVs[i].im, imag_input_str, 10, MPFR_RNDN);
 
-		fscanf(in_ptr, "%lf + %lfi", &(eigRe[i]), &(eigIm[i]));
-		complex_d_to_mpfr(eigVs + i, CMPLX(eigRe[i], eigIm[i]));
+		memset(real_input_str, 0, sizeof(real_input_str));
+		memset(imag_input_str, 0, sizeof(imag_input_str));
 
 		// complex_printf(eigVs + i);
 		// printf("\n");
 
-		// memset(cur_input_string, 0, sizeof(cur_input_string));
+		// fscanf(in_ptr, "%lf + %lfi", &(eigRe[i]), &(eigIm[i]));
+		// complex_d_to_mpfr(eigVs + i, CMPLX(eigRe[i], eigIm[i]));
+
+		// printf("%s + %si\n", real_input_str, imag_input_str);
 	}
 
 	for (int i = 0; i < n_eigVs; i++)
 	{
-		fscanf(in_ptr, "%lf + %lfi", coeffsRe + i, coeffsIm + i);
 		init_complex(coeffs + i);
-		complex_d_to_mpfr(coeffs + i, CMPLX(coeffsRe[i], coeffsIm[i]));
+
+		fscanf(in_ptr, "%s + %s", real_input_str, imag_input_str);
+		imag_input_str[strlen(imag_input_str) - 1] = '\0';
+
+		mpfr_set_str(coeffs[i].re, real_input_str, 10, MPFR_RNDN);
+
+		mpfr_set_str(coeffs[i].im, imag_input_str, 10, MPFR_RNDN);
+
+		memset(real_input_str, 0, sizeof(real_input_str));
+		memset(imag_input_str, 0, sizeof(imag_input_str));
+
+		// fscanf(in_ptr, "%lf + %lfi", coeffsRe + i, coeffsIm + i);
+		// init_complex(coeffs + i);
+		// complex_d_to_mpfr(coeffs + i, CMPLX(coeffsRe[i], coeffsIm[i]));
 
 		init_complex(coeffs_t + i);
 
