@@ -226,6 +226,9 @@ void get_eigVs(complex_nbr *eigVs, int n, FILE *in_ptr)
 
 		mpfr_set_str(eigVs[i].im, input2, 10, MPFR_RNDN);
 
+		// complex_printf(eigVs + i);
+		// printf("\n");
+
 		memset(input1, 0, sizeof(input1));
 		memset(input2, 0, sizeof(input2));
 	}
@@ -300,7 +303,7 @@ void get_init_matrix(complex_nbr **out, double x, complex_nbr *eigVs, int n, com
 	}
 }
 
-void darboux_transform(complex_nbr *sol, complex_nbr *eigVs, complex_nbr *coeffs, complex_nbr **init_matrix, int n, complex_nbr *dum, FILE *log_ptr)
+void darboux_transform(complex_nbr *sol, complex_nbr *eigVs, complex_nbr *coeffs, complex_nbr **init_matrix, int n, complex_nbr *dum)
 {
 	// complex_nbr **M;
 	complex_nbr q[2];
@@ -454,6 +457,9 @@ void darboux_transform(complex_nbr *sol, complex_nbr *eigVs, complex_nbr *coeffs
 
 void dressing_transform_grid() {}
 
+// COMPILE COMMAND:
+//  gcc -I/opt/homebrew/include -L/opt/homebrew/lib/  -o sol darboux_transform_for_NLS.c -lmpfr -lgmp
+
 // Input format:
 // n_eigVs
 // eig1
@@ -468,23 +474,18 @@ void dressing_transform_grid() {}
 int main(void)
 {
 	mpfr_set_default_prec(PRECISION);
-	char output_path[] = "/Users/ivanpedrocr/Documents/soliton_computation.txt";
 
 	complex_nbr *eigVs, *coeffs, *coeffs_t;
 	double *eigRe, *eigIm, *coeffsRe, *coeffsIm;
-	int n_eigVs, t_length, x_length;
+	int n_samples, n_eigVs, t_length, x_length;
 	double t_step, x_step, t_start, t_end, x_start, x_end;
-	// char real_input_str[50], imag_input_str[50];
 	complex_nbr dum[3], sol;
 	complex_nbr **init_matrix;
 
 	FILE *in_ptr;
 	FILE *out_ptr;
-	FILE *log_ptr;
 
 	clock_t init_time = clock();
-
-	log_ptr = fopen("/Users/ivanpedrocr/Documents/soliton_log.txt", "w");
 
 	init_complex(&sol);
 	init_complex(dum);
@@ -492,8 +493,8 @@ int main(void)
 	init_complex(dum + 2);
 
 	in_ptr = fopen("input.txt", "r");
-	out_ptr = fopen(output_path, "w");
 
+	fscanf(in_ptr, "%d", &n_samples);
 	fscanf(in_ptr, "%d", &n_eigVs);
 
 	eigRe = calloc(n_eigVs, sizeof(double));
@@ -504,24 +505,13 @@ int main(void)
 	eigVs = calloc(n_eigVs, sizeof(complex_nbr));
 	coeffs = calloc(n_eigVs, sizeof(complex_nbr));
 	coeffs_t = calloc(n_eigVs, sizeof(complex_nbr));
+	init_matrix = calloc(n_eigVs, sizeof(complex_nbr *));
 
 	for (int i = 0; i < n_eigVs; i++)
 	{
 		init_complex(eigVs + i);
 		init_complex(coeffs + i);
 		init_complex(coeffs_t + i);
-	}
-
-	get_eigVs(eigVs, n_eigVs, in_ptr);
-	get_coeffs(coeffs, n_eigVs, in_ptr);
-
-	fscanf(in_ptr, "%lf %lf %lf", &x_start, &x_step, &x_end);
-	fscanf(in_ptr, "%lf %lf %lf", &t_start, &t_step, &t_end);
-
-	init_matrix = calloc(n_eigVs, sizeof(complex_nbr *));
-
-	for (int i = 0; i < n_eigVs; i++)
-	{
 		init_matrix[i] = calloc(4, sizeof(complex_nbr));
 
 		init_complex(&(init_matrix[i][0]));
@@ -529,29 +519,48 @@ int main(void)
 		init_complex(&(init_matrix[i][2]));
 		init_complex(&(init_matrix[i][3]));
 	}
+
+	// Get x values, t values, eigVs, coeffs
+
+	fscanf(in_ptr, "%lf:%lf:%lf", &x_start, &x_step, &x_end);
+	fscanf(in_ptr, "%lf:%lf:%lf", &t_start, &t_step, &t_end);
+
 	x_length = floor((x_end - x_start) / x_step);
 	t_length = floor((t_end - t_start) / t_step);
 
 	// START DRESSING TRANSFORM ON GRID
-
-	for (int i = 0; i <= t_length; i++)
+	for (int l = 0; l < n_samples; l++)
 	{
-		double t = t_start + i * t_step;
+		char output_path[200];
 
-		get_coeffs_time(coeffs_t, coeffs, eigVs, n_eigVs, t, dum->re);
+		sprintf(output_path, "/Users/ivanpedrocr/Documents/soliton_samples/soliton_sample_%d.txt", l);
 
-		for (int j = 0; j <= x_length; j++)
+		out_ptr = fopen(output_path, "w");
+
+		get_eigVs(eigVs, n_eigVs, in_ptr);
+		get_coeffs(coeffs, n_eigVs, in_ptr);
+
+		for (int i = 0; i <= t_length; i++)
 		{
-			double x = x_start + j * x_step;
+			double t = t_start + i * t_step;
 
-			get_init_matrix(init_matrix, x, eigVs, n_eigVs, dum);
+			get_coeffs_time(coeffs_t, coeffs, eigVs, n_eigVs, t, dum->re);
 
-			darboux_transform(&sol, eigVs, coeffs_t, init_matrix, n_eigVs, dum, log_ptr);
+			for (int j = 0; j <= x_length; j++)
+			{
+				double x = x_start + j * x_step;
 
-			mpfr_fprintf(out_ptr, "%.16Rf%+.16Rf", sol.re, sol.im);
-			fprintf(out_ptr, "i ");
+				get_init_matrix(init_matrix, x, eigVs, n_eigVs, dum);
+
+				darboux_transform(&sol, eigVs, coeffs_t, init_matrix, n_eigVs, dum);
+
+				mpfr_fprintf(out_ptr, "%.16Rf%+.16Rf", sol.re, sol.im);
+				fprintf(out_ptr, "i ");
+			}
+			fprintf(out_ptr, "\n");
 		}
-		fprintf(out_ptr, "\n");
+
+		fclose(out_ptr);
 	}
 
 	clock_t end_time = clock();
@@ -573,8 +582,6 @@ int main(void)
 
 	free(init_matrix);
 	fclose(in_ptr);
-	fclose(log_ptr);
-	fclose(out_ptr);
 	free(eigVs);
 	free(coeffs);
 	free(eigRe);
