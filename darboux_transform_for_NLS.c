@@ -8,6 +8,8 @@
 #include "mpfr.h"
 
 #define PRECISION 500
+#define INPUT_PATH "input.txt"
+#define OUTPUT_PATH "/soliton_samples"
 
 typedef struct complex_nbr
 {
@@ -226,9 +228,6 @@ void get_eigVs(complex_nbr *eigVs, int n, FILE *in_ptr)
 
 		mpfr_set_str(eigVs[i].im, input2, 10, MPFR_RNDN);
 
-		// complex_printf(eigVs + i);
-		// printf("\n");
-
 		memset(input1, 0, sizeof(input1));
 		memset(input2, 0, sizeof(input2));
 	}
@@ -264,9 +263,6 @@ void get_coeffs_time(complex_nbr *coeffs_t, complex_nbr *coeffs, complex_nbr *ei
 		complex_mult_by_re(coeffs_t + k, coeffs_t + k, dum);
 		complex_exp(coeffs_t + k, coeffs_t + k);
 		complex_mult(coeffs_t + k, coeffs_t + k, coeffs + k, dum);
-
-		// complex_printf(coeffs_t + k);
-		// printf("\n");
 	}
 }
 
@@ -338,15 +334,6 @@ void darboux_transform(complex_nbr *sol, complex_nbr *eigVs, complex_nbr *coeffs
 		complex_cpy(&(M[i][1]), init_matrix[i] + 1);
 		complex_cpy(&(M[i][2]), init_matrix[i] + 2);
 		complex_cpy(&(M[i][3]), init_matrix[i] + 3);
-
-		// complex_printf(init_matrix[i]);
-		// printf(" , ");
-		// complex_printf(init_matrix[i] + 1);
-		// printf("\n");
-		// complex_printf(init_matrix[i] + 2);
-		// printf(" , ");
-		// complex_printf(init_matrix[i] + 3);
-		// printf("\n \n");
 	}
 
 	for (int i = 0; i < n; i++)
@@ -367,11 +354,6 @@ void darboux_transform(complex_nbr *sol, complex_nbr *eigVs, complex_nbr *coeffs
 		complex_mult(&(q[1]), &(q[1]), ci, dum[2].re);
 		complex_conj(dum, &(M[i][2]));
 		complex_add(&(q[1]), &(q[1]), dum);
-
-		// complex_printf(q);
-		// printf("\n");
-		// complex_printf(q + 1);
-		// printf("\n");
 
 		// set dum.re=q_1^2, dum.im=q_2^2
 		complex_abs_square(dum->re, &(q[0]), dum[2].re);
@@ -399,15 +381,6 @@ void darboux_transform(complex_nbr *sol, complex_nbr *eigVs, complex_nbr *coeffs
 		// Get Q_{21}
 		complex_conj(dum, dum);
 		complex_mult_by_i(&(Q[2]), dum, dum[2].re);
-
-		// complex_printf(Q);
-		// printf(" , ");
-		// complex_printf(Q + 1);
-		// printf("\n");
-		// complex_printf(Q + 2);
-		// printf(" , ");
-		// complex_printf(Q + 3);
-		// printf("\n \n");
 
 		complex_add(sol, sol, &(Q[1]));
 
@@ -462,8 +435,8 @@ void dressing_transform_grid() {}
 
 // Input format:
 // n_eigVs
-// eig1
-// eig2
+// eigV1
+// eigV2
 //...
 // coeff1
 // coeff2
@@ -492,7 +465,7 @@ int main(void)
 	init_complex(dum + 1);
 	init_complex(dum + 2);
 
-	in_ptr = fopen("input.txt", "r");
+	in_ptr = fopen(INPUT_PATH, "r");
 
 	fscanf(in_ptr, "%d", &n_samples);
 	fscanf(in_ptr, "%d", &n_eigVs);
@@ -533,7 +506,7 @@ int main(void)
 	{
 		char output_path[200];
 
-		sprintf(output_path, "/Users/ivanpedrocr/Documents/soliton_samples/soliton_sample_%d.txt", l);
+		sprintf(output_path, OUTPUT_PATH "/soliton_sample_%d.txt", l);
 
 		out_ptr = fopen(output_path, "w");
 
